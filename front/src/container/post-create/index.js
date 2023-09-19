@@ -1,8 +1,13 @@
 import "./index.css";
 import FieldForm from "../../component/field-form";
 import Grid from "../../component/grid";
-import { useState } from "react";
+import { useReducer } from "react";
 import { LOAD_STATUS, Alert, Loader } from "../../component/load";
+import {
+  REQUEST_ACTION_TYPE,
+  requestInitialState,
+  requestReducer,
+} from "../../util/request";
 
 export default function Container({
   onCreate,
@@ -10,15 +15,14 @@ export default function Container({
   button,
   id = null,
 }) {
-  const [status, setStatus] = useState(null);
-  const [message, setMessage] = useState("");
+  const [state, dispatch] = useReducer(requestReducer, requestInitialState);
 
   const handleSubmit = (value) => {
     return sendData({ value });
   };
 
   const sendData = async (dataToSend) => {
-    setStatus(LOAD_STATUS.PROGRESS);
+    dispatch({ type: REQUEST_ACTION_TYPE.PROGRESS });
 
     try {
       const res = await fetch("http://localhost:4000/post-create", {
@@ -32,16 +36,13 @@ export default function Container({
       const data = await res.json();
 
       if (res.ok) {
-        setStatus(null);
-
+        dispatch({ type: REQUEST_ACTION_TYPE.RESET });
         if (onCreate) onCreate();
       } else {
-        setMessage(data.message);
-        setStatus(LOAD_STATUS.ERROR);
+        dispatch({ type: REQUEST_ACTION_TYPE.ERROR, message: data.message });
       }
     } catch (error) {
-      setMessage(error.message);
-      setStatus(LOAD_STATUS.ERROR);
+      dispatch({ type: REQUEST_ACTION_TYPE.ERROR, message: error.message });
     }
   };
 
@@ -59,10 +60,10 @@ export default function Container({
         button={button}
         onSubmit={handleSubmit}
       />
-      {status === LOAD_STATUS.ERROR && (
-        <Alert status={status} message={message} />
+      {state.status === LOAD_STATUS.ERROR && (
+        <Alert status={state.status} message={state.message} />
       )}
-      {status === LOAD_STATUS.PROGRESS && <Loader />}
+      {state.status === LOAD_STATUS.PROGRESS && <Loader />}
     </Grid>
   );
 }

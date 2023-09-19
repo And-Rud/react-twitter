@@ -1,4 +1,4 @@
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useReducer, useState } from "react";
 import "./index.css";
 import Box from "../../component/box";
 import PostContent from "../../component/post-content";
@@ -6,35 +6,44 @@ import Grid from "../../component/grid";
 import PostCreate from "../post-create";
 import { Alert, LOAD_STATUS, Skeleton } from "../../component/load";
 import { getDate } from "../../util/getDate";
+import {
+  REQUEST_ACTION_TYPE,
+  requestInitialState,
+  requestReducer,
+} from "../../util/request";
 
 export default function Container({ id, username, text, date }) {
-  const [data, setData] = useState({
-    id,
-    username,
-    text,
-    date,
-    reply: null,
-  });
-  const [status, setStatus] = useState(null);
-  const [message, setMessage] = useState("");
+  const [state, dispatch] = useReducer(
+    requestReducer,
+    requestInitialState,
+    (state) => ({ ...state, data: { id, username, text, date, reply: null } })
+  );
 
   const getData = async () => {
-    setStatus(LOAD_STATUS.PROGRESS);
+    dispatch({ type: REQUEST_ACTION_TYPE.PROGRESS });
     try {
-      const res = await fetch(`http://localhost:4000/post-item?id=${data.id}`);
+      const res = await fetch(
+        `http://localhost:4000/post-item?id=${state.data.id}`
+      );
 
       const resData = await res.json();
 
       if (res.ok) {
-        setData(convertData(resData));
-        setStatus(LOAD_STATUS.SUCCESS);
+        dispatch({
+          type: REQUEST_ACTION_TYPE.SUCCESS,
+          payload: convertData(resData),
+        });
       } else {
-        setMessage(resData.message);
-        setStatus(LOAD_STATUS.ERROR);
+        dispatch({
+          type: REQUEST_ACTION_TYPE.ERROR,
+          payload: resData.message,
+        });
       }
     } catch (error) {
-      setMessage(error.message);
-      setStatus(LOAD_STATUS.ERROR);
+      dispatch({
+        type: REQUEST_ACTION_TYPE.ERROR,
+        payload: error.message,
+      });
     }
   };
 
@@ -55,19 +64,22 @@ export default function Container({ id, username, text, date }) {
   const [isOpen, setOpen] = useState(false);
 
   const handleOpen = () => {
-    if (status === null) {
-      getData();
-    }
     setOpen(!isOpen);
   };
+
+  useEffect(() => {
+    if (isOpen === true) {
+      getData();
+    }
+  }, [isOpen]);
 
   return (
     <Box style={{ padding: 0 }}>
       <div style={{ padding: "20px", cursor: "pointer" }} onClick={handleOpen}>
         <PostContent
-          username={data.username}
-          date={data.date}
-          text={data.text}
+          username={state.data.username}
+          date={state.data.date}
+          text={state.data.text}
         />
       </div>
 
@@ -78,12 +90,12 @@ export default function Container({ id, username, text, date }) {
               <PostCreate
                 placeholder="Post your reply"
                 button="Reply"
-                id={data.id}
+                id={state.data.id}
                 onCreate={getData}
               />
             </Box>
 
-            {status === LOAD_STATUS.PROGRESS && (
+            {state.status === LOAD_STATUS.PROGRESS && (
               <Fragment>
                 <Box>
                   <Skeleton />
@@ -94,13 +106,13 @@ export default function Container({ id, username, text, date }) {
               </Fragment>
             )}
 
-            {status === LOAD_STATUS.ERROR && (
-              <Alert status={status} message={message} />
+            {state.status === LOAD_STATUS.ERROR && (
+              <Alert status={state.status} message={state.message} />
             )}
 
-            {status === LOAD_STATUS.SUCCESS &&
-              data.isEmpty === false &&
-              data.reply.map((item) => (
+            {state.status === LOAD_STATUS.SUCCESS &&
+              state.data.isEmpty === false &&
+              state.data.reply.map((item) => (
                 <Fragment key={item.id}>
                   <Box>
                     <PostContent {...item} />
