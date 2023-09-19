@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useReducer, useState } from "react";
+import { Fragment, useCallback, useEffect, useReducer, useState } from "react";
 import "./index.css";
 import Box from "../../component/box";
 import PostContent from "../../component/post-content";
@@ -19,7 +19,7 @@ export default function Container({ id, username, text, date }) {
     (state) => ({ ...state, data: { id, username, text, date, reply: null } })
   );
 
-  const getData = async () => {
+  const getData = useCallback(async () => {
     dispatch({ type: REQUEST_ACTION_TYPE.PROGRESS });
     try {
       const res = await fetch(
@@ -45,7 +45,7 @@ export default function Container({ id, username, text, date }) {
         payload: error.message,
       });
     }
-  };
+  }, [state.data.id]);
 
   const convertData = ({ post }) => ({
     id: post.id,

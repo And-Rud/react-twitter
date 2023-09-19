@@ -1,7 +1,8 @@
 import "./index.css";
 import Grid from "../grid";
+import { memo } from "react";
 
-export default function Component({ username, date, text }) {
+function Component({ username, date, text }) {
   return (
     <Grid>
       <div className="post-content">
@@ -12,3 +13,5 @@ export default function Component({ username, date, text }) {
     </Grid>
   );
 }
+
+export default memo(Component);
